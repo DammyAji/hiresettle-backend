@@ -58,4 +58,15 @@ export class AuthService {
     this.logger.log(`User authenticated: ${stellarAddress}`);
     return { accessToken, user };
   }
+
+  async updateProfile(userId: string, dto: any) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.company !== undefined ? { company: dto.company } : {}),
+        ...(dto.webhookUrl !== undefined ? { webhookUrl: dto.webhookUrl } : {}),
+      },
+    });
+  }
 }
