@@ -10,21 +10,29 @@ import { EngagementsService } from './engagements.service';
 import { CreateEngagementDto } from './dto/create-engagement.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { EngagementStatus, UserRole } from '@prisma/client';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
+import { EngagementStatus } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
+import { UserJwtSubThrottlerGuard } from '../../common/guards/user-jwt-sub-throttler.guard';
 
 @ApiTags('engagements')
 @ApiBearerAuth()
+@UseGuards(UserJwtSubThrottlerGuard)
 @UseGuards(JwtAuthGuard)
+@Throttle({ limit: 100, ttl: 60 })
 @Controller('engagements')
 export class EngagementsController {
-  constructor(private readonly engagementsService: EngagementsService) {}
+  constructor(private readonly engagementsService: EngagementsService) { }
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles(UserRole.COMPANY)
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.COMPANY)
+  @ApiOperation({ summary: 'Register a newly created on-chain engagement' })
   @ApiOperation({ summary: 'Create engagement with on-chain escrow (COMPANY only)' })
   create(@Body() dto: CreateEngagementDto) {
     return this.engagementsService.create(dto);

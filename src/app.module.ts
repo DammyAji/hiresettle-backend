@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
 
+
 import { PrismaModule } from './common/prisma/prisma.module';
 import { StellarModule } from './common/stellar/stellar.module';
 
@@ -14,6 +15,7 @@ import { EventsModule } from './modules/events/events.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -26,6 +28,9 @@ import { HealthModule } from './modules/health/health.module';
         {
           ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
           limit: config.get<number>('THROTTLE_LIMIT', 100),
+          // headers: true is supported in newer @nestjs/throttler versions.
+          // If not supported, the TooManyRequestsHeadersFilter will fill required headers.
+          headers: true,
         },
       ],
     }),
@@ -43,6 +48,7 @@ import { HealthModule } from './modules/health/health.module';
     NotificationsModule,
     UsersModule,
     HealthModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

@@ -12,12 +12,24 @@ export class RolesGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!requiredRoles) return true;
-
-    const { user } = context.switchToHttp().getRequest();
-    if (!requiredRoles.includes(user.role)) {
-      throw new ForbiddenException(`Access denied. Required roles: ${requiredRoles.join(', ')}`);
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true;
     }
+
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    if (!user || !user.role) {
+      throw new ForbiddenException('No role found in token. Access denied.');
+    }
+
+    const hasRole = requiredRoles.includes(user.role);
+    if (!hasRole) {
+      throw new ForbiddenException(
+        `Role '${user.role}' is not authorised. Required: ${requiredRoles.join(' or ')}`,
+      );
+    }
+
     return true;
   }
 }
