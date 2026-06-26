@@ -13,6 +13,7 @@ import { EngagementsModule } from './modules/engagements/engagements.module';
 import { MilestonesModule } from './modules/milestones/milestones.module';
 import { EventsModule } from './modules/events/events.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { UsersModule } from './modules/users/users.module';
 import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
 
@@ -45,6 +46,7 @@ import { AdminModule } from './modules/admin/admin.module';
     MilestonesModule,
     EventsModule,
     NotificationsModule,
+    UsersModule,
     HealthModule,
     AdminModule,
   ],
