@@ -1,5 +1,10 @@
-import { Injectable, Logger, OnModuleInit, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  BadRequestException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   Networks,
   SorobanRpc,
@@ -10,7 +15,7 @@ import {
   scValToNative,
   xdr,
   nativeToScVal,
-} from '@stellar/stellar-sdk';
+} from "@stellar/stellar-sdk";
 
 /**
  * StellarService
@@ -40,15 +45,15 @@ export class StellarService implements OnModuleInit {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
-    const rpcUrl = this.config.get<string>('STELLAR_RPC_URL');
-    const networkName = this.config.get<string>('STELLAR_NETWORK', 'testnet');
+    const rpcUrl = this.config.get<string>("STELLAR_RPC_URL");
+    const networkName = this.config.get<string>("STELLAR_NETWORK", "testnet");
 
     this.rpcClient = new SorobanRpc.Server(rpcUrl, { allowHttp: true });
-    this.contractId = this.config.get<string>('HIRESETTLE_CONTRACT_ID');
+    this.contractId = this.config.get<string>("HIRESETTLE_CONTRACT_ID");
     this.networkPassphrase =
-      networkName === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+      networkName === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 
-    const secretKey = this.config.get<string>('STELLAR_SECRET_KEY');
+    const secretKey = this.config.get<string>("STELLAR_SECRET_KEY");
     if (secretKey) {
       this.backendKeypair = Keypair.fromSecret(secretKey);
     }
@@ -61,9 +66,15 @@ export class StellarService implements OnModuleInit {
   // RPC ACCESS
   // ----------------------------------------------------------
 
-  getClient(): SorobanRpc.Server { return this.rpcClient; }
-  getNetworkPassphrase(): string { return this.networkPassphrase; }
-  getContractId(): string { return this.contractId; }
+  getClient(): SorobanRpc.Server {
+    return this.rpcClient;
+  }
+  getNetworkPassphrase(): string {
+    return this.networkPassphrase;
+  }
+  getContractId(): string {
+    return this.contractId;
+  }
 
   // ----------------------------------------------------------
   // EVENT FETCHING
@@ -81,7 +92,7 @@ export class StellarService implements OnModuleInit {
         startLedger,
         filters: [
           {
-            type: 'contract',
+            type: "contract",
             contractIds: [this.contractId],
           },
         ],
@@ -89,7 +100,10 @@ export class StellarService implements OnModuleInit {
       });
       return result.events ?? [];
     } catch (error) {
-      this.logger.error(`Failed to fetch events from ledger ${startLedger}`, error.message);
+      this.logger.error(
+        `Failed to fetch events from ledger ${startLedger}`,
+        error.message,
+      );
       return [];
     }
   }
@@ -108,7 +122,7 @@ export class StellarService implements OnModuleInit {
       const dummyKeypair = Keypair.random();
       const dummyAccount = {
         accountId: () => dummyKeypair.publicKey(),
-        sequenceNumber: () => '0',
+        sequenceNumber: () => "0",
         incrementSequenceNumber: () => {},
       } as any;
 
@@ -129,7 +143,10 @@ export class StellarService implements OnModuleInit {
       }
       return null;
     } catch (error) {
-      this.logger.error(`simulateContractCall(${method}) failed`, error.message);
+      this.logger.error(
+        `simulateContractCall(${method}) failed`,
+        error.message,
+      );
       throw error;
     }
   }
@@ -182,11 +199,14 @@ export class StellarService implements OnModuleInit {
     milestoneIndex: number,
   ): Promise<boolean> {
     try {
-      const { nativeToScVal } = await import('@stellar/stellar-sdk');
-      const result = await this.simulateContractCall('is_milestone_unlockable', [
-        nativeToScVal(engagementId, { type: 'string' }),
-        nativeToScVal(milestoneIndex, { type: 'u32' }),
-      ]);
+      const { nativeToScVal } = await import("@stellar/stellar-sdk");
+      const result = await this.simulateContractCall(
+        "is_milestone_unlockable",
+        [
+          nativeToScVal(engagementId, { type: "string" }),
+          nativeToScVal(milestoneIndex, { type: "u32" }),
+        ],
+      );
       return Boolean(result);
     } catch {
       return false;
@@ -202,10 +222,10 @@ export class StellarService implements OnModuleInit {
     milestoneIndex: number,
   ): Promise<number> {
     try {
-      const { nativeToScVal } = await import('@stellar/stellar-sdk');
-      const result = await this.simulateContractCall('ledgers_until_unlock', [
-        nativeToScVal(engagementId, { type: 'string' }),
-        nativeToScVal(milestoneIndex, { type: 'u32' }),
+      const { nativeToScVal } = await import("@stellar/stellar-sdk");
+      const result = await this.simulateContractCall("ledgers_until_unlock", [
+        nativeToScVal(engagementId, { type: "string" }),
+        nativeToScVal(milestoneIndex, { type: "u32" }),
       ]);
       return Number(result ?? 0);
     } catch {
@@ -229,14 +249,21 @@ export class StellarService implements OnModuleInit {
     arbiterAddress: string;
     tokenAddress: string;
     totalAmount: string;
-    milestones: Array<{ name: string; paymentPercent: number; kind: string; retentionDays?: number }>;
+    milestones: Array<{
+      name: string;
+      paymentPercent: number;
+      kind: string;
+      retentionDays?: number;
+    }>;
   }): Promise<{ txHash: string; ledger: number }> {
     if (!this.backendKeypair) {
-      throw new BadRequestException('Backend Stellar keypair not configured');
+      throw new BadRequestException("Backend Stellar keypair not configured");
     }
 
     const contract = new Contract(this.contractId);
-    const account = await this.rpcClient.getAccount(this.backendKeypair.publicKey());
+    const account = await this.rpcClient.getAccount(
+      this.backendKeypair.publicKey(),
+    );
 
     const milestonesScVal = nativeToScVal(
       params.milestones.map((m) => ({
@@ -253,13 +280,13 @@ export class StellarService implements OnModuleInit {
     })
       .addOperation(
         contract.call(
-          'create_engagement',
-          nativeToScVal(params.engagementId, { type: 'string' }),
-          nativeToScVal(params.companyAddress, { type: 'address' }),
-          nativeToScVal(params.recruiterAddress, { type: 'address' }),
-          nativeToScVal(params.arbiterAddress, { type: 'address' }),
-          nativeToScVal(params.tokenAddress, { type: 'address' }),
-          nativeToScVal(BigInt(params.totalAmount), { type: 'i128' }),
+          "create_engagement",
+          nativeToScVal(params.engagementId, { type: "string" }),
+          nativeToScVal(params.companyAddress, { type: "address" }),
+          nativeToScVal(params.recruiterAddress, { type: "address" }),
+          nativeToScVal(params.arbiterAddress, { type: "address" }),
+          nativeToScVal(params.tokenAddress, { type: "address" }),
+          nativeToScVal(BigInt(params.totalAmount), { type: "i128" }),
           milestonesScVal,
         ),
       )
@@ -268,15 +295,19 @@ export class StellarService implements OnModuleInit {
 
     const simulation = await this.rpcClient.simulateTransaction(tx);
     if (SorobanRpc.Api.isSimulationError(simulation)) {
-      throw new BadRequestException(`Contract simulation failed: ${simulation.error}`);
+      throw new BadRequestException(
+        `Contract simulation failed: ${simulation.error}`,
+      );
     }
 
     const prepared = SorobanRpc.assembleTransaction(tx, simulation).build();
     prepared.sign(this.backendKeypair);
 
     const sendResult = await this.rpcClient.sendTransaction(prepared);
-    if (sendResult.status === 'ERROR') {
-      throw new BadRequestException(`Transaction submission failed: ${sendResult.errorResult}`);
+    if (sendResult.status === "ERROR") {
+      throw new BadRequestException(
+        `Transaction submission failed: ${sendResult.errorResult}`,
+      );
     }
 
     // Poll for confirmation
@@ -286,10 +317,15 @@ export class StellarService implements OnModuleInit {
       await new Promise((r) => setTimeout(r, 2000));
       getResult = await this.rpcClient.getTransaction(sendResult.hash);
       attempts++;
-    } while (getResult.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND && attempts < 15);
+    } while (
+      getResult.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND &&
+      attempts < 15
+    );
 
     if (getResult.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
-      throw new BadRequestException(`Transaction not confirmed: ${getResult.status}`);
+      throw new BadRequestException(
+        `Transaction not confirmed: ${getResult.status}`,
+      );
     }
 
     return { txHash: sendResult.hash, ledger: getResult.ledger };
@@ -321,24 +357,47 @@ export class StellarService implements OnModuleInit {
     tokenAddress: string,
   ): Promise<{ balance: bigint }> {
     try {
-      const horizonUrl = this.config.get<string>('STELLAR_HORIZON_URL');
+      const horizonUrl = this.config.get<string>("STELLAR_HORIZON_URL");
       const response = await fetch(`${horizonUrl}/accounts/${accountAddress}`);
       if (!response.ok) {
-        throw new Error(`Account not found: ${accountAddress}`);
+        // For balance endpoint and validations we want a hard failure.
+        throw new BadRequestException(
+          `Stellar account not found or not accessible: ${accountAddress}`,
+        );
       }
+
       const account = await response.json();
-      const trustline = account.balances.find(
-        (b: any) => b.asset_code && b.asset_issuer && 
-          `${b.asset_code}:${b.asset_issuer}` === tokenAddress ||
-          b.asset_type === 'native' && tokenAddress === 'native',
-      );
-      if (!trustline) {
-        return { balance: 0n };
+
+      const isNative = tokenAddress === "native" || tokenAddress === "XLM";
+      if (isNative) {
+        // Horizon accounts endpoint returns native balance as XLM string.
+        // For consistency with the existing usdcToStroops logic, we convert XLM stroops-like decimal into stroops.
+        // NOTE: existing code treats balances as USDC->stroops; for native we assume Horizon returns stroops-compatible integer string.
+        // If Horizon returns XLM as string (7 decimals), usdcToStroops still works.
+        const nativeBalStr =
+          account.balances?.find((b: any) => b.asset_type === "native")
+            ?.balance ??
+          account.balance ??
+          "0";
+        return { balance: this.usdcToStroops(String(nativeBalStr)) };
       }
+
+      const trustline = account.balances.find(
+        (b: any) =>
+          b.asset_code &&
+          b.asset_issuer &&
+          `${b.asset_code}:${b.asset_issuer}` === tokenAddress,
+      );
+      if (!trustline) return { balance: 0n };
+
+      // Horizon trustline balance for issued assets is a string representing the human unit for that asset.
       const balance = this.usdcToStroops(trustline.balance);
       return { balance };
-    } catch (error) {
-      this.logger.error(`Failed to get balance for ${accountAddress}`, error.message);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to get balance for ${accountAddress}`,
+        error?.message,
+      );
       throw error;
     }
   }
@@ -347,14 +406,14 @@ export class StellarService implements OnModuleInit {
   stroopsToUsdc(stroops: string | bigint, decimals = 2): string {
     const value = BigInt(stroops);
     const whole = value / 10_000_000n;
-    const fraction = (value % 10_000_000n).toString().padStart(7, '0');
+    const fraction = (value % 10_000_000n).toString().padStart(7, "0");
     return parseFloat(`${whole}.${fraction}`).toFixed(decimals);
   }
 
   /** Convert human-readable USDC amount to stroops */
   usdcToStroops(usdc: string): bigint {
-    const [whole, fraction = ''] = usdc.split('.');
-    const paddedFraction = fraction.padEnd(7, '0').slice(0, 7);
+    const [whole, fraction = ""] = usdc.split(".");
+    const paddedFraction = fraction.padEnd(7, "0").slice(0, 7);
     return BigInt(whole) * 10_000_000n + BigInt(paddedFraction);
   }
 
@@ -362,12 +421,54 @@ export class StellarService implements OnModuleInit {
    * Get the current base fee and recommended Soroban fee.
    * @returns { baseFee: number, sorobanFee: number }
    */
+  /**
+   * Check if a Stellar account exists and (optionally) has any balance.
+   * Used by registration and interaction validations.
+   *
+   * @param requireFunded when true, the account must have non-zero balance on Horizon.
+   */
+  async accountExists(
+    accountAddress: string,
+    requireFunded = true,
+  ): Promise<boolean> {
+    try {
+      const horizonUrl = this.config.get<string>("STELLAR_HORIZON_URL");
+      const response = await fetch(`${horizonUrl}/accounts/${accountAddress}`);
+      if (!response.ok) return false;
+      if (!requireFunded) return true;
+
+      const account = await response.json();
+      // Horizon for native balance is returned under account.balance (stroops integer as string) on newer versions.
+      const nativeBalance = account.balance ?? "0";
+      const hasNative = BigInt(nativeBalance) > 0n;
+      if (hasNative) return true;
+
+      const balances = account.balances ?? [];
+      return balances.some((b: any) => BigInt(b.balance ?? "0") > 0n);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /** Validate Stellar address format (not on-chain existence). */
+  isValidStellarAddress(address: string): boolean {
+    try {
+      return Keypair.fromPublicKey(address).publicKey() === address;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get the current base fee and recommended Soroban fee.
+   * @returns { baseFee: number, sorobanFee: number } in stroops
+   */
   async getFeeEstimate(): Promise<{ baseFee: number; sorobanFee: number }> {
     const info = await this.rpcClient.getLatestLedger();
     // Base fee is in stroops (100 stroops = 0.00001 XLM)
     const baseFee = Number(info.baseFee);
     // Soroban fee is an estimate, typically higher than base fee
-    const sorobanFee = baseFee * 10; // Example: 10x base fee for Soroban
+    const sorobanFee = baseFee * 10;
     return { baseFee, sorobanFee };
   }
 }
